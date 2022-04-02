@@ -29,8 +29,8 @@ var testNote3 = notes.Note{
 
 func getNotepad(t *testing.T) notes.Notepad {
 	id := notes.RegisterNewUser()
-	notepad, ok := notes.Notepads[id]
-	if !ok {
+	notepad := notes.GetNotepad(id)
+	if notepad == nil {
 		t.Errorf("Could not fetch notepad")
 	}
 	return *notepad

@@ -20,12 +20,21 @@ type Note struct {
 
 var NoteNotFoundError = errors.New("note not found")
 
-var Notepads = make(map[uuid.UUID]*Notepad)
+var notepads = make(map[uuid.UUID]*Notepad)
 
 func RegisterNewUser() uuid.UUID {
 	notepad := createNewNotepad()
-	Notepads[notepad.UserId] = &notepad
+	notepads[notepad.UserId] = &notepad
 	return notepad.UserId
+}
+
+func GetNotepad(userId uuid.UUID) *Notepad {
+	notepad, ok := notepads[userId]
+	if !ok {
+		log.Panicf("no notepad found with userId: %q", userId)
+		return nil
+	}
+	return notepad
 }
 
 func createNewNotepad() Notepad {
