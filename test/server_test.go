@@ -109,11 +109,13 @@ func TestCreateNewNoteHandler(t *testing.T) {
 func TestUpdateNoteHandler(t *testing.T) {
 	testNoteId, testUserId := getNoteId(t)
 
+	user := notes.User{
+		Id:   testUserId,
+		Name: "",
+	}
+
 	testNoteMessage := server.NoteMessage{
-		User: notes.User{
-			Id:   testUserId,
-			Name: "",
-		},
+		User: user,
 		Note: notes.Note{
 			Id:       testNoteId,
 			Title:    "New Title",
@@ -139,6 +141,16 @@ func TestUpdateNoteHandler(t *testing.T) {
 	}
 
 	checkHttpOk(resp.StatusCode, t)
+
+	notepad := notes.GetNotepad(user.Id)
+	note, err3 := notepad.GetNote(testNoteId)
+	if err3 != nil {
+		t.Error("Could note get note", err3)
+	}
+
+	if note.Title != testNoteMessage.Note.Title || note.Content != testNoteMessage.Note.Content {
+		t.Errorf("Note title or content does not match. %q should be %q and %q should be %q", note.Title, testNoteMessage.Note.Title, note.Content, testNoteMessage.Note.Content)
+	}
 }
 
 func TestArchiveNoteHandler(t *testing.T) {

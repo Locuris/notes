@@ -27,6 +27,8 @@ func StartHttpServer(port string) {
 
 	echoServer.PUT("/notes", updateNoteHandler)
 
+	echoServer.GET("/notes/:noteId", getNoteHandler)
+
 	echoServer.Logger.Fatal(echoServer.Start(":" + port))
 }
 
@@ -47,7 +49,6 @@ func createNoteHandler(c echo.Context) error {
 }
 
 func updateNoteHandler(c echo.Context) error {
-
 	noteMessage := getNoteMessage(c)
 
 	notepad := notes.GetNotepad(noteMessage.User.Id)
@@ -62,6 +63,27 @@ func updateNoteHandler(c echo.Context) error {
 	note.Archived = noteMessage.Note.Archived
 
 	return c.NoContent(http.StatusOK)
+}
+
+func getNoteHandler(c echo.Context) error {
+	user := getUser(c)
+	if user == nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	notepad := notes.GetNotepad(user.Id)
+	if notepad == nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	noteId := getParam(c, "noteId")
+
+	note, err := notepad.GetNote(noteId)
+	if err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	return c.JSON(http.StatusOK, note)
 }
 
 func getQueryParam(c echo.Context, paramName string) string {
@@ -85,7 +107,7 @@ func getNotepad(c echo.Context) *notes.Notepad {
 	return notes.GetNotepad(userId)
 }
 
-func getNote(c echo.Context, notepad *notes.Notepad) *notes.Note {
+func getNoteFromId(c echo.Context, notepad *notes.Notepad) *notes.Note {
 	noteId := getParam(c, "noteId")
 
 	note, err2 := notepad.GetNote(noteId)
@@ -109,4 +131,20 @@ func getNoteMessage(c echo.Context) *NoteMessage {
 	}
 
 	return noteMessage
+}
+
+func getUser(c echo.Context) *notes.User {
+	bodyBytes, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		return nil
+	}
+
+	user := new(notes.User)
+
+	err = json.Unmarshal(bodyBytes, user)
+	if err != nil {
+		return nil
+	}
+
+	return user
 }
