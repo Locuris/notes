@@ -39,7 +39,7 @@ func getNotepad(t *testing.T) notes.Notepad {
 func TestCreateNewNotepad(t *testing.T) {
 	notepad := getNotepad(t)
 
-	if notepad.Notes == nil || len(notepad.Notes) != 0 || notepad.UserId.String() == "" {
+	if notepad.Notes == nil || len(notepad.Notes) != 0 || notepad.User.Id == "" {
 		t.Errorf("Notepad wasn't created properly")
 	}
 }

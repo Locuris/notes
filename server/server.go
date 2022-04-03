@@ -1,13 +1,19 @@
 package server
 
 import (
-	"github.com/google/uuid"
+	"encoding/json"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"notes/notes"
 )
+
+type NoteMessage struct {
+	User notes.User `json:"user"`
+	Note notes.Note `json:"note"`
+}
 
 func StartHttpServer(port string) {
 	echoServer := echo.New()
@@ -15,9 +21,11 @@ func StartHttpServer(port string) {
 	echoServer.Use(middleware.Logger())
 	echoServer.GET("/health", healthCheck)
 
-	echoServer.GET("/notes", registerUserHandler)
+	echoServer.GET("/users/new", registerUserHandler)
 
-	echoServer.POST("/notes/:userId", createNoteHandler)
+	echoServer.GET("/notes/new", createNoteHandler)
+
+	echoServer.PUT("/notes", updateNoteHandler)
 
 	echoServer.Logger.Fatal(echoServer.Start(":" + port))
 }
@@ -27,33 +35,78 @@ func healthCheck(c echo.Context) error {
 }
 
 func registerUserHandler(c echo.Context) error {
-	return c.String(http.StatusOK, notes.RegisterNewUser().String())
+	return c.String(http.StatusOK, notes.RegisterNewUser())
 }
 
 func createNoteHandler(c echo.Context) error {
-	userId := getParams(c, "userId")
+	notepad := getNotepad(c)
 
-	userIdAsUuid, err := uuid.FromBytes([]byte(userId))
-
-	if err != nil {
-		return err
-	}
-
-	notepad := notes.GetNotepad(userIdAsUuid)
-
-	//title := getParams(c, "title")
-	//content := getParams(c, "content")
-
-	title := ""
-	content := ""
-
-	note := notepad.CreateNewNote(title, content)
+	note := notepad.CreateNewNote("", "")
 
 	return c.String(http.StatusOK, note.Id)
 }
 
-func getParams(c echo.Context, paramName string) string {
+func updateNoteHandler(c echo.Context) error {
+
+	noteMessage := getNoteMessage(c)
+
+	notepad := notes.GetNotepad(noteMessage.User.Id)
+	note, err := notepad.GetNote(noteMessage.Note.Id)
+
+	if err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	note.Title = noteMessage.Note.Title
+	note.Content = noteMessage.Note.Content
+	note.Archived = noteMessage.Note.Archived
+
+	return c.NoContent(http.StatusOK)
+}
+
+func getQueryParam(c echo.Context, paramName string) string {
 	param := c.QueryParam(paramName)
 	log.Println("param is:", param)
 	return param
+}
+
+func getParam(c echo.Context, paramName string) string {
+	param := c.Param(paramName)
+	log.Println("param is:", param)
+	return param
+}
+
+func getNotepad(c echo.Context) *notes.Notepad {
+	userId := getQueryParam(c, "userId")
+	if userId == "" {
+		return nil
+	}
+
+	return notes.GetNotepad(userId)
+}
+
+func getNote(c echo.Context, notepad *notes.Notepad) *notes.Note {
+	noteId := getParam(c, "noteId")
+
+	note, err2 := notepad.GetNote(noteId)
+	if err2 != nil {
+		return nil
+	}
+	return note
+}
+
+func getNoteMessage(c echo.Context) *NoteMessage {
+	bodyBytes, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		return nil
+	}
+
+	noteMessage := new(NoteMessage)
+
+	err = json.Unmarshal(bodyBytes, noteMessage)
+	if err != nil {
+		return nil
+	}
+
+	return noteMessage
 }

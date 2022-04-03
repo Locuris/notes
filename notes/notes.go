@@ -7,8 +7,13 @@ import (
 )
 
 type Notepad struct {
-	UserId uuid.UUID
-	Notes  map[string]*Note
+	User  *User
+	Notes map[string]*Note
+}
+
+type User struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type Note struct {
@@ -20,15 +25,16 @@ type Note struct {
 
 var NoteNotFoundError = errors.New("note not found")
 
-var notepads = make(map[uuid.UUID]*Notepad)
+var notepads = make(map[string]*Notepad)
 
-func RegisterNewUser() uuid.UUID {
-	notepad := createNewNotepad()
-	notepads[notepad.UserId] = &notepad
-	return notepad.UserId
+func RegisterNewUser() string {
+	user := createNewUser()
+	notepad := user.createNewNotepad()
+	notepads[notepad.User.Id] = &notepad
+	return notepad.User.Id
 }
 
-func GetNotepad(userId uuid.UUID) *Notepad {
+func GetNotepad(userId string) *Notepad {
 	notepad, ok := notepads[userId]
 	if !ok {
 		log.Panicf("no notepad found with userId: %q", userId)
@@ -37,10 +43,17 @@ func GetNotepad(userId uuid.UUID) *Notepad {
 	return notepad
 }
 
-func createNewNotepad() Notepad {
+func (user *User) createNewNotepad() Notepad {
 	return Notepad{
-		UserId: uuid.New(),
-		Notes:  make(map[string]*Note),
+		User:  user,
+		Notes: make(map[string]*Note),
+	}
+}
+
+func createNewUser() *User {
+	return &User{
+		Id:   uuid.New().String(),
+		Name: "",
 	}
 }
 
