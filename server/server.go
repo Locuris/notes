@@ -15,6 +15,15 @@ type NoteMessage struct {
 	Note notes.Note `json:"note"`
 }
 
+type NoteCollection struct {
+	Notes []notes.Note `json:"notes"`
+}
+
+type NoteRequest struct {
+	User   notes.User `json:"user"`
+	NoteId string     `json:"noteId"`
+}
+
 func StartHttpServer(port string) {
 	echoServer := echo.New()
 
@@ -27,7 +36,11 @@ func StartHttpServer(port string) {
 
 	echoServer.PUT("/notes", updateNoteHandler)
 
-	echoServer.GET("/notes/:noteId", getNoteHandler)
+	echoServer.GET("/notes", getNoteHandler)
+
+	echoServer.GET("/notes/saved", getSavedNotesHandler)
+
+	echoServer.GET("/notes/archived", getArchivedNotesHandler)
 
 	echoServer.Logger.Fatal(echoServer.Start(":" + port))
 }
@@ -52,15 +65,20 @@ func updateNoteHandler(c echo.Context) error {
 	noteMessage := getNoteMessage(c)
 
 	notepad := notes.GetNotepad(noteMessage.User.Id)
-	note, err := notepad.GetNote(noteMessage.Note.Id)
-
+	err := notepad.UpdateNote(noteMessage.Note.Id, noteMessage.Note.Title, noteMessage.Note.Content)
 	if err != nil {
 		return c.NoContent(http.StatusNotFound)
 	}
 
-	note.Title = noteMessage.Note.Title
-	note.Content = noteMessage.Note.Content
-	note.Archived = noteMessage.Note.Archived
+	if noteMessage.Note.Archived {
+		err = notepad.ArchiveNote(noteMessage.Note.Id)
+	} else {
+		err = notepad.UnarchiveNote(noteMessage.Note.Id)
+	}
+
+	if err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
 
 	return c.NoContent(http.StatusOK)
 }
@@ -86,6 +104,38 @@ func getNoteHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, note)
 }
 
+func getSavedNotesHandler(c echo.Context) error {
+	user := getUser(c)
+	if user == nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	notepad := notes.GetNotepad(user.Id)
+	if notepad == nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	noteCollection := NoteCollection{Notes: notepad.GetSavedNotes()}
+
+	return c.JSON(http.StatusOK, noteCollection)
+}
+
+func getArchivedNotesHandler(c echo.Context) error {
+	user := getUser(c)
+	if user == nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	notepad := notes.GetNotepad(user.Id)
+	if notepad == nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	noteCollection := NoteCollection{Notes: notepad.GetArchivedNotes()}
+
+	return c.JSON(http.StatusOK, noteCollection)
+}
+
 func getQueryParam(c echo.Context, paramName string) string {
 	param := c.QueryParam(paramName)
 	log.Println("param is:", param)
@@ -105,16 +155,6 @@ func getNotepad(c echo.Context) *notes.Notepad {
 	}
 
 	return notes.GetNotepad(userId)
-}
-
-func getNoteFromId(c echo.Context, notepad *notes.Notepad) *notes.Note {
-	noteId := getParam(c, "noteId")
-
-	note, err2 := notepad.GetNote(noteId)
-	if err2 != nil {
-		return nil
-	}
-	return note
 }
 
 func getNoteMessage(c echo.Context) *NoteMessage {

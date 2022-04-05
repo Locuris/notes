@@ -94,7 +94,7 @@ func (notepad *Notepad) setArchiveState(id string, archive bool) error {
 		return NoteNotFoundError
 	}
 	if note.Archived == archive {
-		log.Printf("unneccesary attempt to chang archived archive of note %(. this should not happen")
+		log.Printf("unneccesary attempt to change archived archive of note %q. this should not happen", id)
 	}
 	note.Archived = archive
 	return nil
@@ -108,21 +108,21 @@ func (notepad Notepad) UnarchiveNote(id string) error {
 	return notepad.setArchiveState(id, false)
 }
 
-func (notepad *Notepad) getNotesByArchiveState(isArchived bool) []*Note {
-	notes := make([]*Note, 0)
+func (notepad *Notepad) getNotesByArchiveState(isArchived bool) []Note {
+	notes := make([]Note, 0)
 	for _, note := range notepad.Notes {
 		if note.Archived == isArchived {
-			notes = append(notes, note)
+			notes = append(notes, *note)
 		}
 	}
 	return notes
 }
 
-func (notepad *Notepad) GetSavedNotes() []*Note {
+func (notepad *Notepad) GetSavedNotes() []Note {
 	return notepad.getNotesByArchiveState(false)
 }
 
-func (notepad *Notepad) GetArchivedNotes() []*Note {
+func (notepad *Notepad) GetArchivedNotes() []Note {
 	return notepad.getNotesByArchiveState(true)
 }
 
