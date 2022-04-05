@@ -1,14 +1,14 @@
 # notes
 Interview coding challenge
 
-###Installation
+### Installation
 Set the port in ```config/config.yml```
 ```
 go build start.go
 ./start
 ```
 
-###API
+### API
 | Function           | HTTP Method | Path              | Response / Reqest                                                                              |
 |--------------------|-------------|-------------------|------------------------------------------------------------------------------------------------|
 | New User           | `GET`       | `/users/new`      | **RESPONSE** *userId* <br/> 36 character guid belonging to a newly created user on the server. |
@@ -17,7 +17,7 @@ go build start.go
 | Get Saved Notes    | `GET`       | `/notes/saved`    | **REQUEST** User<br/>**RESPONSE** NoteCollection                                               |
 | Get Archived Notes | `GET`       | `/notes/archived` | **REQUEST** User<br/>**RESPONSE** NoteCollection                                               |
 
-###Objects
+### Objects
 
 **User**
 ```json
